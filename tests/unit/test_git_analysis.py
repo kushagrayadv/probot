@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-Unit tests for git analysis tools.
-"""
 
 import json
 import pytest

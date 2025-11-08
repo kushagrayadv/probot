@@ -1,5 +1,3 @@
-"""Constants used throughout the application."""
-
 # Default PR templates
 DEFAULT_TEMPLATES = {
     "bug.md": "Bug Fix",

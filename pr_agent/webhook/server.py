@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Simple webhook server for GitHub Actions events.
-Stores events in a JSON file that the MCP server can read.
-"""
 
 import json
 from datetime import datetime

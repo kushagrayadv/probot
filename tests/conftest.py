@@ -1,5 +1,3 @@
-"""Pytest configuration and fixtures."""
-
 import pytest
 import sys
 from pathlib import Path

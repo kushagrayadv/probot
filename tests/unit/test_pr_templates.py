@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-Unit tests for PR template tools.
-"""
 
 import json
 import pytest
