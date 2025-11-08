@@ -56,6 +56,22 @@ class Settings(BaseSettings):
         description="Optional log file path. If None, logs to stdout"
     )
     
+    # Database configuration
+    database_url: Optional[str] = Field(
+        default=None,
+        description="PostgreSQL database connection URL (e.g., postgresql://user:password@localhost:5432/pr_agent_db)"
+    )
+    
+    db_pool_size: int = Field(
+        default=10,
+        description="Database connection pool size"
+    )
+    
+    db_max_overflow: int = Field(
+        default=5,
+        description="Maximum overflow connections in pool"
+    )
+    
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

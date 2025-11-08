@@ -6,7 +6,6 @@ from typing import Dict, Any, Optional
 from aiohttp import web
 
 from pr_agent.config.settings import (
-    EVENTS_FILE,
     GITHUB_WEBHOOK_SECRET,
     LOG_LEVEL,
     LOG_FORMAT,
@@ -14,9 +13,9 @@ from pr_agent.config.settings import (
 )
 from pr_agent.webhook.security import verify_github_signature, get_raw_body
 from pr_agent.utils.logger import setup_logging, get_logger
-from pr_agent.utils.file_lock import safe_append_json
 from pr_agent.utils.json_helpers import from_json_string, safe_model_validate
 from pr_agent.utils.response_helpers import web_error_response, web_json_response
+from pr_agent.db.operations import init_database, insert_event
 from pr_agent.models.events import GitHubEvent, WorkflowRun, CheckRun
 
 # Setup logging
@@ -152,17 +151,39 @@ async def handle_webhook(request: web.Request) -> web.Response:
             sender=sender
         )
         
-        # Append event with file locking (safely handles concurrent writes)
-        # This will automatically keep only the last 100 events
-        success: bool = safe_append_json(EVENTS_FILE, event_dict, max_items=100)
-        
-        if success:
-            logger.debug("Event saved successfully", event_type=event_type, repository=repository)
-        else:
+        # Save event to database
+        try:
+            # Parse timestamp
+            timestamp = datetime.fromisoformat(event_dict["timestamp"].replace('Z', '+00:00'))
+            
+            # Extract workflow_run and check_run as dicts
+            workflow_run_dict = event_dict.get("workflow_run")
+            check_run_dict = event_dict.get("check_run")
+            
+            # Insert into database
+            event_id = await insert_event(
+                timestamp=timestamp,
+                event_type=event_type,
+                action=action,
+                repository=repository,
+                sender=sender,
+                workflow_run=workflow_run_dict,
+                check_run=check_run_dict,
+                raw_payload=data
+            )
+            
+            logger.debug(
+                "Event saved to database successfully",
+                event_id=event_id,
+                event_type=event_type,
+                repository=repository
+            )
+        except Exception as e:
             logger.error(
-                "Failed to save event",
-                events_file=str(EVENTS_FILE),
-                event_type=event_type
+                "Failed to save event to database",
+                error=str(e),
+                event_type=event_type,
+                repository=repository
             )
             # Continue even if save fails - we still want to return success
         
@@ -190,6 +211,26 @@ async def handle_webhook(request: web.Request) -> web.Response:
 
 # Create app and add route
 app = web.Application()
+
+# Initialize database on startup
+async def init_app(app: web.Application) -> None:
+    """Initialize database on application startup."""
+    try:
+        await init_database()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error("Failed to initialize database", error=str(e))
+        # Continue anyway - database might be configured later
+
+# Cleanup on shutdown
+async def cleanup_app(app: web.Application) -> None:
+    """Cleanup on application shutdown."""
+    from pr_agent.db.connection import close_pool
+    await close_pool()
+    logger.info("Database connection pool closed")
+
+app.on_startup.append(init_app)
+app.on_cleanup.append(cleanup_app)
 app.router.add_post('/webhook/github', handle_webhook)
 
 
@@ -198,7 +239,6 @@ if __name__ == '__main__':
         "Starting webhook server",
         host="localhost",
         port=8080,
-        events_file=str(EVENTS_FILE),
         signature_verification="enabled" if GITHUB_WEBHOOK_SECRET else "disabled"
     )
     

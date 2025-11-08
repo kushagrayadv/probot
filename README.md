@@ -32,6 +32,11 @@ This solution extends Modules 1 and 2 with:
    export LOG_LEVEL="INFO"           # DEBUG, INFO, WARNING, ERROR, CRITICAL
    export LOG_FORMAT="json"          # "json" for structured logs, "text" for human-readable
    export LOG_FILE="/path/to/logs/app.log"  # Optional: log to file instead of stdout
+   
+   # Required: Database configuration (PostgreSQL)
+   export DATABASE_URL="postgresql://user:password@localhost:5432/pr_agent_db"
+   export DB_POOL_SIZE=10            # Optional: Connection pool size (default: 10)
+   export DB_MAX_OVERFLOW=5          # Optional: Max overflow connections (default: 5)
    ```
    
    **Alternative: `.env` file**: Create a `.env` file in the project root:
@@ -41,6 +46,9 @@ This solution extends Modules 1 and 2 with:
    LOG_LEVEL=INFO
    LOG_FORMAT=json
    LOG_FILE=/path/to/logs/app.log
+   DATABASE_URL=postgresql://user:password@localhost:5432/pr_agent_db
+   DB_POOL_SIZE=10
+   DB_MAX_OVERFLOW=5
    ```
    
    **Configuration Management**: The application uses Pydantic Settings for configuration management, which provides:
@@ -53,7 +61,25 @@ This solution extends Modules 1 and 2 with:
    
    **Logging**: The application uses structured JSON logging by default, which is ideal for log aggregation systems. Set `LOG_FORMAT="text"` for human-readable logs during development.
 
-3. Start services:
+3. Set up PostgreSQL database:
+   ```bash
+   # Create database
+   createdb pr_agent_db
+   
+   # Or using psql
+   psql -U postgres -c "CREATE DATABASE pr_agent_db;"
+   ```
+
+4. Migrate existing data (if you have JSON file with events):
+   ```bash
+   # Dry run to see what would be migrated
+   python -m pr_agent.db.migrate --dry-run
+   
+   # Actually migrate
+   python -m pr_agent.db.migrate
+   ```
+
+5. Start services:
    ```bash
    # Terminal 1: Webhook server
    python -m pr_agent.webhook.server
@@ -101,6 +127,17 @@ The project follows best practices for code organization with extracted common p
 - **Validation Utilities**: Common Pydantic model validation patterns with error handling
 
 This reduces code duplication and ensures consistency across the codebase.
+
+### Database
+
+The project uses PostgreSQL for storing GitHub webhook events:
+
+- **Database**: PostgreSQL with asyncpg driver
+- **Table**: `github_events` (auto-created on startup)
+- **Migration**: Script to migrate existing JSON data to database
+- **Connection Pooling**: Configurable connection pool for performance
+
+See `docs/DATABASE_ASSUMPTIONS.md` for detailed database schema and assumptions.
 
 ## Key Learning Outcomes
 

@@ -11,6 +11,9 @@ from pr_agent.utils.logger import setup_logging, get_logger
 setup_logging(level=LOG_LEVEL, format_type=LOG_FORMAT, log_file=Path(LOG_FILE) if LOG_FILE else None)
 logger = get_logger(__name__)
 
+# Note: Database initialization happens lazily when first accessed
+# This avoids blocking startup if database is not yet configured
+
 # Import tool registrations
 from pr_agent.tools.git_analysis import register_git_analysis_tools
 from pr_agent.tools.pr_templates import register_pr_template_tools
