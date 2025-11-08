@@ -91,6 +91,17 @@ The project uses async/await consistently throughout:
 
 This ensures the application remains responsive and can handle concurrent requests efficiently.
 
+### Code Organization
+
+The project follows best practices for code organization with extracted common patterns:
+
+- **JSON Utilities** (`pr_agent/utils/json_helpers.py`): Centralized JSON serialization/deserialization with Pydantic model support
+- **Response Helpers** (`pr_agent/utils/response_helpers.py`): Standardized response formatting for tools and webhooks
+- **HTTP Client** (`pr_agent/utils/http_client.py`): Reusable async HTTP client with error handling
+- **Validation Utilities**: Common Pydantic model validation patterns with error handling
+
+This reduces code duplication and ensures consistency across the codebase.
+
 ## Key Learning Outcomes
 
 This solution demonstrates all MCP primitives working together for real-world team automation.

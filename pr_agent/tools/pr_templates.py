@@ -1,4 +1,3 @@
-import json
 import asyncio
 from pathlib import Path
 from typing import List, Dict, Any
@@ -8,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from pr_agent.config.settings import TEMPLATES_DIR
 from pr_agent.utils.constants import DEFAULT_TEMPLATES, TYPE_MAPPING
 from pr_agent.utils.logger import get_logger
+from pr_agent.utils.json_helpers import to_json_string
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,7 @@ def register_pr_template_tools(mcp: FastMCP) -> None:
                 )
         
         logger.info("Retrieved PR templates", count=len(templates))
-        return json.dumps(templates, indent=2)
+        return to_json_string(templates)
     
     
     @mcp.tool()
@@ -104,5 +104,5 @@ def register_pr_template_tools(mcp: FastMCP) -> None:
             "usage_hint": "Claude can help you fill out this template based on the specific changes in your PR."
         }
         
-        return json.dumps(suggestion, indent=2)
+        return to_json_string(suggestion)
 

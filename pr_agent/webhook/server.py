@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -16,6 +15,8 @@ from pr_agent.config.settings import (
 from pr_agent.webhook.security import verify_github_signature, get_raw_body
 from pr_agent.utils.logger import setup_logging, get_logger
 from pr_agent.utils.file_lock import safe_append_json
+from pr_agent.utils.json_helpers import from_json_string, safe_model_validate
+from pr_agent.utils.response_helpers import web_error_response, web_json_response
 from pr_agent.models.events import GitHubEvent, WorkflowRun, CheckRun
 
 # Setup logging
@@ -57,9 +58,10 @@ async def handle_webhook(request: web.Request) -> web.Response:
                         event_type=event_type,
                         remote_addr=remote_addr
                     )
-                    return web.json_response(
-                        {"error": "Invalid webhook signature"},
-                        status=401
+                    return web_error_response(
+                        "Invalid webhook signature",
+                        status=401,
+                        error_code="INVALID_SIGNATURE"
                     )
                 logger.debug("Webhook signature verified successfully", event_type=event_type)
             except ValueError as e:
@@ -70,24 +72,24 @@ async def handle_webhook(request: web.Request) -> web.Response:
                     remote_addr=remote_addr,
                     error=str(e)
                 )
-                return web.json_response(
-                    {"error": f"Signature verification failed: {str(e)}"},
-                    status=401
+                return web_error_response(
+                    f"Signature verification failed: {str(e)}",
+                    status=401,
+                    error_code="SIGNATURE_VERIFICATION_FAILED"
                 )
         
         # Parse JSON from raw body
-        try:
-            data: Dict[str, Any] = json.loads(raw_body.decode('utf-8'))
-        except json.JSONDecodeError as e:
+        data: Dict[str, Any] = from_json_string(raw_body.decode('utf-8'))
+        if data is None:
             logger.error(
                 "Invalid JSON payload",
                 event_type=event_type,
-                remote_addr=remote_addr,
-                error=str(e)
+                remote_addr=remote_addr
             )
-            return web.json_response(
-                {"error": f"Invalid JSON payload: {str(e)}"},
-                status=400
+            return web_error_response(
+                "Invalid JSON payload",
+                status=400,
+                error_code="INVALID_JSON"
             )
         
         # Extract data with validation
@@ -98,26 +100,19 @@ async def handle_webhook(request: web.Request) -> web.Response:
         # Parse workflow_run and check_run with Pydantic validation
         workflow_run: Optional[WorkflowRun] = None
         if data.get("workflow_run"):
-            try:
-                workflow_run = WorkflowRun.model_validate(data["workflow_run"])
-            except Exception as e:
-                logger.warning(
-                    "Failed to validate workflow_run data",
-                    error=str(e),
-                    event_type=event_type
-                )
-                # Continue with raw data if validation fails
+            workflow_run = safe_model_validate(
+                WorkflowRun,
+                data["workflow_run"],
+                context={"event_type": event_type, "field": "workflow_run"}
+            )
         
         check_run: Optional[CheckRun] = None
         if data.get("check_run"):
-            try:
-                check_run = CheckRun.model_validate(data["check_run"])
-            except Exception as e:
-                logger.warning(
-                    "Failed to validate check_run data",
-                    error=str(e),
-                    event_type=event_type
-                )
+            check_run = safe_model_validate(
+                CheckRun,
+                data["check_run"],
+                context={"event_type": event_type, "field": "check_run"}
+            )
         
         # Create event record with Pydantic model
         try:
@@ -178,7 +173,7 @@ async def handle_webhook(request: web.Request) -> web.Response:
             action=action
         )
         
-        return web.json_response({"status": "received"})
+        return web_json_response({"status": "received"})
     except Exception as e:
         logger.exception(
             "Unexpected error processing webhook",
@@ -186,9 +181,10 @@ async def handle_webhook(request: web.Request) -> web.Response:
             remote_addr=remote_addr,
             error=str(e)
         )
-        return web.json_response(
-            {"error": f"Internal server error: {str(e)}"},
-            status=500
+        return web_error_response(
+            f"Internal server error: {str(e)}",
+            status=500,
+            error_code="INTERNAL_ERROR"
         )
 
 

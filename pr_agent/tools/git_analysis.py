@@ -1,4 +1,3 @@
-import json
 import os
 import asyncio
 from typing import Optional, Dict, Any
@@ -7,6 +6,8 @@ from mcp.server.fastmcp import FastMCP
 
 from pr_agent.config.settings import BASE_DIR
 from pr_agent.utils.logger import get_logger
+from pr_agent.utils.json_helpers import to_json_string
+from pr_agent.utils.response_helpers import error_response
 
 logger = get_logger(__name__)
 
@@ -150,7 +151,7 @@ def register_git_analysis_tools(mcp: FastMCP) -> None:
                 total_diff_lines=len(diff_lines) if include_diff else 0
             )
             
-            return json.dumps(analysis, indent=2)
+            return to_json_string(analysis)
             
         except Exception as e:
             error_msg: str = str(e)
@@ -159,4 +160,4 @@ def register_git_analysis_tools(mcp: FastMCP) -> None:
                 base_branch=base_branch,
                 error=error_msg
             )
-            return json.dumps({"error": f"Git error: {error_msg}"})
+            return error_response(f"Git error: {error_msg}", error_code="GIT_ERROR")
