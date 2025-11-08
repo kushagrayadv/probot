@@ -1,5 +1,3 @@
-"""PR template tools."""
-
 import json
 from pathlib import Path
 

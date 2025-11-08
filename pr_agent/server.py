@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Module 3: Slack Notification Integration - Complete Solution
-Combines all MCP primitives (Tools and Prompts) for complete team communication workflows.
-"""
 
 from mcp.server.fastmcp import FastMCP
 

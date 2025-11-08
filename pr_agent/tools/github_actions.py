@@ -1,5 +1,3 @@
-"""GitHub Actions tools."""
-
 import json
 from typing import Optional
 

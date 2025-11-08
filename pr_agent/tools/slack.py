@@ -1,5 +1,3 @@
-"""Slack notification tools."""
-
 import os
 import requests
 

@@ -1,5 +1,3 @@
-"""Git analysis tools."""
-
 import json
 import os
 import subprocess
