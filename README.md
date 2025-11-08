@@ -3,9 +3,6 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A comprehensive **Model Context Protocol (MCP) server** that integrates GitHub webhooks, CI/CD monitoring, and Slack notifications to automate PR workflows and team communication.
-
-
 ## Overview
 
 PRobot is an MCP server that bridges GitHub Actions, Git repositories, and Slack to provide:
@@ -96,23 +93,13 @@ pip install -e .
 
 ### Database Setup
 
-1. **Create PostgreSQL database:**
+**Create PostgreSQL database:**
    ```bash
    createdb pr_agent_db
    # Or using psql
    psql -U postgres -c "CREATE DATABASE pr_agent_db;"
    ```
 
-2. **Migrate existing data (if you have JSON file with events):**
-   ```bash
-   # Dry run to see what would be migrated
-   python -m pr_agent.db.migrate --dry-run
-   
-   # Actually migrate
-   python -m pr_agent.db.migrate
-   ```
-
-The database schema (table and indexes) is automatically created on first use.
 
 ## Usage
 
@@ -191,7 +178,7 @@ Template for creating deployment summaries.
 `generate_pr_status_report`
 Template for generating comprehensive PR status reports.
 
-## 🧪 Testing
+## Testing
 
 ### Unit Tests
 
