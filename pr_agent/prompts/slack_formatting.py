@@ -17,28 +17,28 @@ def register_slack_formatting_prompts(mcp: FastMCP) -> None:
         """
         return """Format this GitHub Actions failure as a Slack message using ONLY Slack markdown syntax:
 
-:rotating_light: *CI Failure Alert* :rotating_light:
+            :rotating_light: *CI Failure Alert* :rotating_light:
 
-A CI workflow has failed:
-*Workflow*: workflow_name
-*Branch*: branch_name
-*Status*: Failed
-*View Details*: <https://github.com/test/repo/actions/runs/123|View Logs>
+            A CI workflow has failed:
+            *Workflow*: workflow_name
+            *Branch*: branch_name
+            *Status*: Failed
+            *View Details*: <https://github.com/test/repo/actions/runs/123|View Logs>
 
-Please check the logs and address any issues.
+            Please check the logs and address any issues.
 
-CRITICAL: Use EXACT Slack link format: <https://full-url|Link Text>
-Examples:
-- CORRECT: <https://github.com/user/repo|Repository>
-- WRONG: [Repository](https://github.com/user/repo)
-- WRONG: https://github.com/user/repo
+            CRITICAL: Use EXACT Slack link format: <https://full-url|Link Text>
+            Examples:
+            - CORRECT: <https://github.com/user/repo|Repository>
+            - WRONG: [Repository](https://github.com/user/repo)
+            - WRONG: https://github.com/user/repo
 
-Slack formatting rules:
-- *text* for bold (NOT **text**)
-- `text` for code
-- > text for quotes
-- Use simple bullet format without special characters
-- :emoji_name: for emojis"""
+            Slack formatting rules:
+            - *text* for bold (NOT **text**)
+            - `text` for code
+            - > text for quotes
+            - Use simple bullet format without special characters
+            - :emoji_name: for emojis"""
     
     
     @mcp.prompt()
@@ -50,27 +50,27 @@ Slack formatting rules:
         """
         return """Format this successful GitHub Actions run as a Slack message using ONLY Slack markdown syntax:
 
-:white_check_mark: *Deployment Successful* :white_check_mark:
+            :white_check_mark: *Deployment Successful* :white_check_mark:
 
-Deployment completed successfully for [Repository Name]
+            Deployment completed successfully for [Repository Name]
 
-*Changes:*
-- Key feature or fix 1
-- Key feature or fix 2
+            *Changes:*
+            - Key feature or fix 1
+            - Key feature or fix 2
 
-*Links:*
-<https://github.com/user/repo|View Changes>
+            *Links:*
+            <https://github.com/user/repo|View Changes>
 
-CRITICAL: Use EXACT Slack link format: <https://full-url|Link Text>
-Examples:
-- CORRECT: <https://github.com/user/repo|Repository>
-- WRONG: [Repository](https://github.com/user/repo)
-- WRONG: https://github.com/user/repo
+            CRITICAL: Use EXACT Slack link format: <https://full-url|Link Text>
+            Examples:
+            - CORRECT: <https://github.com/user/repo|Repository>
+            - WRONG: [Repository](https://github.com/user/repo)
+            - WRONG: https://github.com/user/repo
 
-Slack formatting rules:
-- *text* for bold (NOT **text**)
-- `text` for code
-- > text for quotes
-- Use simple bullet format with - or *
-- :emoji_name: for emojis"""
+            Slack formatting rules:
+            - *text* for bold (NOT **text**)
+            - `text` for code
+            - > text for quotes
+            - Use simple bullet format with - or *
+            - :emoji_name: for emojis"""
 
