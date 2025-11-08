@@ -19,7 +19,13 @@ This solution extends Modules 1 and 2 with:
 
 2. Set up environment variables:
    
-   You can configure the application using environment variables or a `.env` file:
+   **Quick Start**: Copy the example environment file and fill in your values:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your actual configuration values
+   ```
+   
+   You can also configure the application using environment variables directly:
    
    ```bash
    # Required: Slack webhook URL
@@ -39,17 +45,7 @@ This solution extends Modules 1 and 2 with:
    export DB_MAX_OVERFLOW=5          # Optional: Max overflow connections (default: 5)
    ```
    
-   **Alternative: `.env` file**: Create a `.env` file in the project root:
-   ```bash
-   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-   GITHUB_WEBHOOK_SECRET=your_webhook_secret_from_github
-   LOG_LEVEL=INFO
-   LOG_FORMAT=json
-   LOG_FILE=/path/to/logs/app.log
-   DATABASE_URL=postgresql://user:password@localhost:5432/pr_agent_db
-   DB_POOL_SIZE=10
-   DB_MAX_OVERFLOW=5
-   ```
+   See `.env.example` for all available configuration options with detailed comments and examples.
    
    **Configuration Management**: The application uses Pydantic Settings for configuration management, which provides:
    - Automatic validation of configuration values
