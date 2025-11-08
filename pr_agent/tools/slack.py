@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 import aiohttp
 import asyncio
@@ -28,7 +27,7 @@ def register_slack_tools(mcp: FastMCP) -> None:
         IMPORTANT: For CI failures, use format_ci_failure_alert prompt first!
         IMPORTANT: For deployments, use format_ci_success_summary prompt first!
         """
-        webhook_url = SLACK_WEBHOOK_URL or os.getenv("SLACK_WEBHOOK_URL")
+        webhook_url = SLACK_WEBHOOK_URL
         if not webhook_url:
             logger.error("Slack webhook URL not configured")
             return "Error: SLACK_WEBHOOK_URL environment variable not set"

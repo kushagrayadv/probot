@@ -18,6 +18,9 @@ This solution extends Modules 1 and 2 with:
    ```
 
 2. Set up environment variables:
+   
+   You can configure the application using environment variables or a `.env` file:
+   
    ```bash
    # Required: Slack webhook URL
    export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
@@ -30,6 +33,21 @@ This solution extends Modules 1 and 2 with:
    export LOG_FORMAT="json"          # "json" for structured logs, "text" for human-readable
    export LOG_FILE="/path/to/logs/app.log"  # Optional: log to file instead of stdout
    ```
+   
+   **Alternative: `.env` file**: Create a `.env` file in the project root:
+   ```bash
+   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+   GITHUB_WEBHOOK_SECRET=your_webhook_secret_from_github
+   LOG_LEVEL=INFO
+   LOG_FORMAT=json
+   LOG_FILE=/path/to/logs/app.log
+   ```
+   
+   **Configuration Management**: The application uses Pydantic Settings for configuration management, which provides:
+   - Automatic validation of configuration values
+   - Support for environment variables and `.env` files
+   - Type safety and IDE autocomplete
+   - Case-insensitive environment variable names
    
    **Security Note**: The `GITHUB_WEBHOOK_SECRET` should match the secret configured in your GitHub repository's webhook settings. If not set, webhook signature verification will be disabled (not recommended for production).
    
