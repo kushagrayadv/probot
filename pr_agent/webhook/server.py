@@ -9,8 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from aiohttp import web
 
-# File to store events
-EVENTS_FILE = Path(__file__).parent / "github_events.json"
+from pr_agent.config.settings import EVENTS_FILE
+
 
 async def handle_webhook(request):
     """Handle incoming GitHub webhook"""
@@ -46,12 +46,15 @@ async def handle_webhook(request):
     except Exception as e:
         return web.json_response({"error": str(e)}, status=400)
 
+
 # Create app and add route
 app = web.Application()
 app.router.add_post('/webhook/github', handle_webhook)
+
 
 if __name__ == '__main__':
     print("🚀 Starting webhook server on http://localhost:8080")
     print("📝 Events will be saved to:", EVENTS_FILE)
     print("🔗 Webhook URL: http://localhost:8080/webhook/github")
     web.run_app(app, host='localhost', port=8080)
+

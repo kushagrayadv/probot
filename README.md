@@ -25,10 +25,10 @@ This solution extends Modules 1 and 2 with:
 3. Start services:
    ```bash
    # Terminal 1: Webhook server
-   python webhook_server.py
+   python -m pr_agent.webhook.server
    
    # Terminal 2: MCP server
-   uv run server.py
+   uv run pr_agent.server
    
    # Terminal 3: Cloudflare tunnel (optional)
    cloudflared tunnel --url http://localhost:8080
@@ -36,8 +36,9 @@ This solution extends Modules 1 and 2 with:
 
 ## Testing
 
-See `manual_test.md` for comprehensive testing instructions using curl commands to simulate GitHub webhook events.
+See `docs/manual_test.md` for comprehensive testing instructions using curl commands to simulate GitHub webhook events.
 
 ## Key Learning Outcomes
 
 This solution demonstrates all MCP primitives working together for real-world team automation.
+
