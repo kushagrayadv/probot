@@ -17,10 +17,16 @@ This solution extends Modules 1 and 2 with:
    uv sync
    ```
 
-2. Set up Slack webhook:
+2. Set up environment variables:
    ```bash
+   # Required: Slack webhook URL
    export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+   
+   # Recommended: GitHub webhook secret for security
+   export GITHUB_WEBHOOK_SECRET="your_webhook_secret_from_github"
    ```
+   
+   **Security Note**: The `GITHUB_WEBHOOK_SECRET` should match the secret configured in your GitHub repository's webhook settings. If not set, webhook signature verification will be disabled (not recommended for production).
 
 3. Start services:
    ```bash

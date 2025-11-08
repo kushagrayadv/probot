@@ -4,9 +4,12 @@ This guide provides curl-based tests so you can verify your implementation witho
 
 ## Prerequisites
 
-1. MCP server running: `uv run server.py`
-2. Webhook server running: `python webhook_server.py` 
+1. MCP server running: `uv run pr_agent.server`
+2. Webhook server running: `python -m pr_agent.webhook.server` 
 3. Slack webhook URL set: `export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."`
+4. (Optional) GitHub webhook secret: `export GITHUB_WEBHOOK_SECRET="your_secret"`
+
+**Note**: If `GITHUB_WEBHOOK_SECRET` is set, webhook requests must include a valid signature. For testing without a secret, leave it unset (not recommended for production).
 
 ## Test 1: Direct Slack Tool Test
 
@@ -21,9 +24,9 @@ Expected result: Message appears in your Slack channel.
 
 ## Test 2: Simulate GitHub Webhook Events
 
-### 2a. Simulate CI Failure Event
+### 2a. Simulate CI Failure Event (Without Signature)
 
-Send a fake GitHub Actions failure event to your webhook server:
+If `GITHUB_WEBHOOK_SECRET` is not set, you can test without signature:
 
 ```bash
 curl -X POST http://localhost:8080/webhook/github \
@@ -56,7 +59,7 @@ curl -X POST http://localhost:8080/webhook/github \
   }'
 ```
 
-### 2b. Simulate CI Success Event
+### 2b. Simulate CI Success Event (Without Signature)
 
 ```bash
 curl -X POST http://localhost:8080/webhook/github \
@@ -87,6 +90,80 @@ curl -X POST http://localhost:8080/webhook/github \
       }]
     }
   }'
+```
+
+### 2c. Test with Webhook Signature (Recommended)
+
+To test with signature verification, you need to generate a valid HMAC SHA256 signature:
+
+```bash
+# Set your webhook secret
+export WEBHOOK_SECRET="your_test_secret"
+
+# Create the payload
+PAYLOAD='{
+  "action": "completed",
+  "workflow_run": {
+    "id": 123456789,
+    "name": "CI",
+    "status": "completed",
+    "conclusion": "success",
+    "run_number": 43
+  }
+}'
+
+# Generate signature (requires openssl)
+SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.* //')
+SIGNATURE_HEADER="sha256=$SIGNATURE"
+
+# Send request with signature
+curl -X POST http://localhost:8080/webhook/github \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: workflow_run" \
+  -H "X-Hub-Signature-256: $SIGNATURE_HEADER" \
+  -d "$PAYLOAD"
+```
+
+**Python script for generating signatures** (alternative method):
+
+```python
+import hmac
+import hashlib
+import json
+
+secret = "your_test_secret"
+payload = {
+    "action": "completed",
+    "workflow_run": {
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success"
+    }
+}
+
+payload_str = json.dumps(payload)
+signature = hmac.new(
+    secret.encode('utf-8'),
+    payload_str.encode('utf-8'),
+    hashlib.sha256
+).hexdigest()
+
+print(f"X-Hub-Signature-256: sha256={signature}")
+```
+
+### 2d. Test Invalid Signature Rejection
+
+Test that invalid signatures are rejected:
+
+```bash
+# Send request with invalid signature
+curl -X POST http://localhost:8080/webhook/github \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: workflow_run" \
+  -H "X-Hub-Signature-256: sha256=invalid_signature" \
+  -d '{"action": "completed"}'
+
+# Expected: 401 Unauthorized with error message
 ```
 
 ## Test 3: End-to-End Workflow Tests

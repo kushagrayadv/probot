@@ -17,3 +17,7 @@ EVENTS_FILE = DATA_DIR / "github_events.json"
 # Slack webhook URL
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
+# GitHub webhook secret for signature verification
+# Set this to the secret configured in your GitHub repository webhook settings
+GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+
