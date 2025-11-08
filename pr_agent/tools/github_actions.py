@@ -5,6 +5,7 @@ from mcp.server.fastmcp import FastMCP
 
 from pr_agent.config.settings import EVENTS_FILE
 from pr_agent.utils.logger import get_logger
+from pr_agent.utils.file_lock import safe_read_json
 
 logger = get_logger(__name__)
 
@@ -21,31 +22,22 @@ def register_github_actions_tools(mcp: FastMCP):
         """
         logger.debug("Getting recent actions events", limit=limit)
         
-        # Read events from file
-        if not EVENTS_FILE.exists():
-            logger.debug("Events file does not exist", events_file=str(EVENTS_FILE))
+        # Read events from file with file locking (safe concurrent access)
+        events = safe_read_json(EVENTS_FILE, default=[])
+        
+        if not events:
+            logger.debug("No events found", events_file=str(EVENTS_FILE))
             return json.dumps([])
         
-        try:
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
-            
-            # Return most recent events
-            recent = events[-limit:]
-            logger.info(
-                "Retrieved recent actions events",
-                limit=limit,
-                total_events=len(events),
-                returned_events=len(recent)
-            )
-            return json.dumps(recent, indent=2)
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(
-                "Failed to read events file",
-                events_file=str(EVENTS_FILE),
-                error=str(e)
-            )
-            return json.dumps([])
+        # Return most recent events
+        recent = events[-limit:]
+        logger.info(
+            "Retrieved recent actions events",
+            limit=limit,
+            total_events=len(events),
+            returned_events=len(recent)
+        )
+        return json.dumps(recent, indent=2)
     
     
     @mcp.tool()
@@ -57,24 +49,11 @@ def register_github_actions_tools(mcp: FastMCP):
         """
         logger.debug("Getting workflow status", workflow_name=workflow_name)
         
-        # Read events from file
-        if not EVENTS_FILE.exists():
-            logger.debug("Events file does not exist", events_file=str(EVENTS_FILE))
-            return json.dumps({"message": "No GitHub Actions events received yet"})
-        
-        try:
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(
-                "Failed to read events file",
-                events_file=str(EVENTS_FILE),
-                error=str(e)
-            )
-            return json.dumps({"message": "No GitHub Actions events received yet"})
+        # Read events from file with file locking (safe concurrent access)
+        events = safe_read_json(EVENTS_FILE, default=[])
         
         if not events:
-            logger.debug("No events in file")
+            logger.debug("No events found", events_file=str(EVENTS_FILE))
             return json.dumps({"message": "No GitHub Actions events received yet"})
         
         # Filter for workflow events

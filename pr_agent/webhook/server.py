@@ -14,6 +14,7 @@ from pr_agent.config.settings import (
 )
 from pr_agent.webhook.security import verify_github_signature, get_raw_body
 from pr_agent.utils.logger import setup_logging, get_logger
+from pr_agent.utils.file_lock import safe_append_json
 
 # Setup logging
 setup_logging(level=LOG_LEVEL, format_type=LOG_FORMAT, log_file=Path(LOG_FILE) if LOG_FILE else None)
@@ -103,33 +104,15 @@ async def handle_webhook(request):
             sender=sender
         )
         
-        # Load existing events
-        events = []
-        if EVENTS_FILE.exists():
-            try:
-                with open(EVENTS_FILE, 'r') as f:
-                    events = json.load(f)
-            except (json.JSONDecodeError, IOError) as e:
-                logger.warning(
-                    "Failed to load existing events file",
-                    error=str(e),
-                    events_file=str(EVENTS_FILE)
-                )
-                events = []
+        # Append event with file locking (safely handles concurrent writes)
+        # This will automatically keep only the last 100 events
+        success = safe_append_json(EVENTS_FILE, event, max_items=100)
         
-        # Add new event and keep last 100
-        events.append(event)
-        events = events[-100:]
-        
-        # Save events
-        try:
-            with open(EVENTS_FILE, 'w') as f:
-                json.dump(events, f, indent=2)
+        if success:
             logger.debug("Event saved successfully", event_type=event_type, repository=repository)
-        except IOError as e:
+        else:
             logger.error(
                 "Failed to save event",
-                error=str(e),
                 events_file=str(EVENTS_FILE),
                 event_type=event_type
             )
