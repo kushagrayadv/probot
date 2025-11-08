@@ -1,7 +1,7 @@
 import json
 import os
 import subprocess
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -11,8 +11,12 @@ from pr_agent.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def register_git_analysis_tools(mcp: FastMCP):
-    """Register git analysis tools with the MCP server."""
+def register_git_analysis_tools(mcp: FastMCP) -> None:
+    """Register git analysis tools with the MCP server.
+    
+    Args:
+        mcp: FastMCP server instance to register tools with
+    """
     
     @mcp.tool()
     async def analyze_file_changes(
@@ -105,7 +109,7 @@ def register_git_analysis_tools(mcp: FastMCP):
                 cwd=cwd
             )
             
-            analysis = {
+            analysis: Dict[str, Any] = {
                 "base_branch": base_branch,
                 "files_changed": files_result.stdout,
                 "statistics": stat_result.stdout,

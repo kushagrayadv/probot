@@ -1,12 +1,20 @@
 from mcp.server.fastmcp import FastMCP
 
 
-def register_ci_analysis_prompts(mcp: FastMCP):
-    """Register CI/CD analysis prompts with the MCP server."""
+def register_ci_analysis_prompts(mcp: FastMCP) -> None:
+    """Register CI/CD analysis prompts with the MCP server.
+    
+    Args:
+        mcp: FastMCP server instance to register prompts with
+    """
     
     @mcp.prompt()
-    async def analyze_ci_results():
-        """Analyze recent CI/CD results and provide insights."""
+    async def analyze_ci_results() -> str:
+        """Analyze recent CI/CD results and provide insights.
+        
+        Returns:
+            Prompt template string for analyzing CI results
+        """
         return """Please analyze the recent CI/CD results from GitHub Actions:
 
 1. First, call get_recent_actions_events() to fetch the latest CI/CD events
@@ -24,8 +32,12 @@ Format your response as:
     
     
     @mcp.prompt()
-    async def troubleshoot_workflow_failure():
-        """Help troubleshoot a failing GitHub Actions workflow."""
+    async def troubleshoot_workflow_failure() -> str:
+        """Help troubleshoot a failing GitHub Actions workflow.
+        
+        Returns:
+            Prompt template string for troubleshooting workflow failures
+        """
         return """Help troubleshoot failing GitHub Actions workflows:
 
 1. Use get_recent_actions_events() to find recent failures

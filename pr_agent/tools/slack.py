@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 import requests
 
 from mcp.server.fastmcp import FastMCP
@@ -9,8 +10,12 @@ from pr_agent.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def register_slack_tools(mcp: FastMCP):
-    """Register Slack tools with the MCP server."""
+def register_slack_tools(mcp: FastMCP) -> None:
+    """Register Slack tools with the MCP server.
+    
+    Args:
+        mcp: FastMCP server instance to register tools with
+    """
     
     @mcp.tool()
     async def send_slack_notification(message: str) -> str:

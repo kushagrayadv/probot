@@ -51,6 +51,18 @@ This solution extends Modules 1 and 2 with:
 
 See `docs/manual_test.md` for comprehensive testing instructions using curl commands to simulate GitHub webhook events.
 
+### Type Checking
+
+The project uses Pydantic for data validation and includes mypy configuration for type checking:
+
+```bash
+# Run type checking
+uv run mypy pr_agent
+
+# Run tests
+uv run pytest
+```
+
 ## Key Learning Outcomes
 
 This solution demonstrates all MCP primitives working together for real-world team automation.

@@ -3,6 +3,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, Any, Optional
 from aiohttp import web
 
 from pr_agent.config.settings import (
@@ -15,16 +16,24 @@ from pr_agent.config.settings import (
 from pr_agent.webhook.security import verify_github_signature, get_raw_body
 from pr_agent.utils.logger import setup_logging, get_logger
 from pr_agent.utils.file_lock import safe_append_json
+from pr_agent.models.events import GitHubEvent, WorkflowRun, CheckRun
 
 # Setup logging
 setup_logging(level=LOG_LEVEL, format_type=LOG_FORMAT, log_file=Path(LOG_FILE) if LOG_FILE else None)
 logger = get_logger(__name__)
 
 
-async def handle_webhook(request):
-    """Handle incoming GitHub webhook with signature verification."""
-    event_type = request.headers.get("X-GitHub-Event", "unknown")
-    remote_addr = request.remote
+async def handle_webhook(request: web.Request) -> web.Response:
+    """Handle incoming GitHub webhook with signature verification.
+    
+    Args:
+        request: aiohttp request object
+        
+    Returns:
+        JSON response with status
+    """
+    event_type: str = request.headers.get("X-GitHub-Event", "unknown")
+    remote_addr: Optional[str] = request.remote
     
     logger.info(
         "Webhook request received",
@@ -68,7 +77,7 @@ async def handle_webhook(request):
         
         # Parse JSON from raw body
         try:
-            data = json.loads(raw_body.decode('utf-8'))
+            data: Dict[str, Any] = json.loads(raw_body.decode('utf-8'))
         except json.JSONDecodeError as e:
             logger.error(
                 "Invalid JSON payload",
@@ -81,20 +90,64 @@ async def handle_webhook(request):
                 status=400
             )
         
-        # Create event record
-        repository = data.get("repository", {}).get("full_name", "unknown")
-        action = data.get("action", "unknown")
-        sender = data.get("sender", {}).get("login", "unknown")
+        # Extract data with validation
+        repository: Optional[str] = data.get("repository", {}).get("full_name") if isinstance(data.get("repository"), dict) else None
+        action: Optional[str] = data.get("action")
+        sender: Optional[str] = data.get("sender", {}).get("login") if isinstance(data.get("sender"), dict) else None
         
-        event = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "event_type": event_type,
-            "action": action,
-            "workflow_run": data.get("workflow_run"),
-            "check_run": data.get("check_run"),
-            "repository": repository,
-            "sender": sender
-        }
+        # Parse workflow_run and check_run with Pydantic validation
+        workflow_run: Optional[WorkflowRun] = None
+        if data.get("workflow_run"):
+            try:
+                workflow_run = WorkflowRun.model_validate(data["workflow_run"])
+            except Exception as e:
+                logger.warning(
+                    "Failed to validate workflow_run data",
+                    error=str(e),
+                    event_type=event_type
+                )
+                # Continue with raw data if validation fails
+        
+        check_run: Optional[CheckRun] = None
+        if data.get("check_run"):
+            try:
+                check_run = CheckRun.model_validate(data["check_run"])
+            except Exception as e:
+                logger.warning(
+                    "Failed to validate check_run data",
+                    error=str(e),
+                    event_type=event_type
+                )
+        
+        # Create event record with Pydantic model
+        try:
+            event = GitHubEvent(
+                timestamp=datetime.utcnow().isoformat(),
+                event_type=event_type,
+                action=action,
+                workflow_run=workflow_run,
+                check_run=check_run,
+                repository=repository,
+                sender=sender
+            )
+            # Convert to dict for JSON serialization
+            event_dict: Dict[str, Any] = event.model_dump(exclude_none=True)
+        except Exception as e:
+            logger.error(
+                "Failed to create event model",
+                error=str(e),
+                event_type=event_type
+            )
+            # Fallback to basic dict structure
+            event_dict = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "event_type": event_type,
+                "action": action,
+                "workflow_run": data.get("workflow_run"),
+                "check_run": data.get("check_run"),
+                "repository": repository,
+                "sender": sender
+            }
         
         logger.info(
             "Processing webhook event",
@@ -106,7 +159,7 @@ async def handle_webhook(request):
         
         # Append event with file locking (safely handles concurrent writes)
         # This will automatically keep only the last 100 events
-        success = safe_append_json(EVENTS_FILE, event, max_items=100)
+        success: bool = safe_append_json(EVENTS_FILE, event_dict, max_items=100)
         
         if success:
             logger.debug("Event saved successfully", event_type=event_type, repository=repository)

@@ -91,7 +91,7 @@ def file_lock(file_path: Path, timeout: float = 5.0, mode: str = 'r+'):
             f.close()
 
 
-def safe_read_json(file_path: Path, default: Any = None) -> Any:
+def safe_read_json(file_path: Path, default: Optional[Any] = None) -> Any:
     """Safely read JSON file with file locking.
     
     Args:

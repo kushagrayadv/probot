@@ -2,7 +2,7 @@
 
 import hmac
 import hashlib
-from typing import Optional
+from typing import Optional, Any
 
 from pr_agent.utils.logger import get_logger
 
@@ -62,7 +62,7 @@ def verify_github_signature(
     return is_valid
 
 
-async def get_raw_body(request) -> bytes:
+async def get_raw_body(request: Any) -> bytes:
     """Read raw request body for signature verification.
     
     This must be called before request.json() to preserve the body.

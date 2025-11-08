@@ -1,12 +1,20 @@
 from mcp.server.fastmcp import FastMCP
 
 
-def register_deployment_prompts(mcp: FastMCP):
-    """Register deployment prompts with the MCP server."""
+def register_deployment_prompts(mcp: FastMCP) -> None:
+    """Register deployment prompts with the MCP server.
+    
+    Args:
+        mcp: FastMCP server instance to register prompts with
+    """
     
     @mcp.prompt()
-    async def create_deployment_summary():
-        """Generate a deployment summary for team communication."""
+    async def create_deployment_summary() -> str:
+        """Generate a deployment summary for team communication.
+        
+        Returns:
+            Prompt template string for creating deployment summaries
+        """
         return """Create a deployment summary for team communication:
 
 1. Check workflow status with get_workflow_status()

@@ -1,12 +1,20 @@
 from mcp.server.fastmcp import FastMCP
 
 
-def register_pr_report_prompts(mcp: FastMCP):
-    """Register PR report prompts with the MCP server."""
+def register_pr_report_prompts(mcp: FastMCP) -> None:
+    """Register PR report prompts with the MCP server.
+    
+    Args:
+        mcp: FastMCP server instance to register prompts with
+    """
     
     @mcp.prompt()
-    async def generate_pr_status_report():
-        """Generate a comprehensive PR status report including CI/CD results."""
+    async def generate_pr_status_report() -> str:
+        """Generate a comprehensive PR status report including CI/CD results.
+        
+        Returns:
+            Prompt template string for generating PR status reports
+        """
         return """Generate a comprehensive PR status report:
 
 1. Use analyze_file_changes() to understand what changed

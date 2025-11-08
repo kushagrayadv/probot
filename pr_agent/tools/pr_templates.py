@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import List, Dict, Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -10,19 +11,23 @@ from pr_agent.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def register_pr_template_tools(mcp: FastMCP):
-    """Register PR template tools with the MCP server."""
+def register_pr_template_tools(mcp: FastMCP) -> None:
+    """Register PR template tools with the MCP server.
+    
+    Args:
+        mcp: FastMCP server instance to register tools with
+    """
     
     @mcp.tool()
     async def get_pr_templates() -> str:
         """List available PR templates with their content."""
         logger.debug("Getting PR templates", templates_dir=str(TEMPLATES_DIR))
         
-        templates = []
+        templates: List[Dict[str, str]] = []
         for filename, template_type in DEFAULT_TEMPLATES.items():
             template_path = TEMPLATES_DIR / filename
             try:
-                content = template_path.read_text()
+                content: str = template_path.read_text()
                 templates.append({
                     "filename": filename,
                     "type": template_type,
@@ -54,11 +59,11 @@ def register_pr_template_tools(mcp: FastMCP):
         )
         
         # Get available templates directly (avoid calling tool from within tool)
-        templates = []
+        templates: List[Dict[str, str]] = []
         for filename, template_type in DEFAULT_TEMPLATES.items():
             template_path = TEMPLATES_DIR / filename
             try:
-                content = template_path.read_text()
+                content: str = template_path.read_text()
                 templates.append({
                     "filename": filename,
                     "type": template_type,
@@ -76,8 +81,8 @@ def register_pr_template_tools(mcp: FastMCP):
             raise ValueError("No PR templates found")
         
         # Find matching template
-        template_file = TYPE_MAPPING.get(change_type.lower(), "feature.md")
-        selected_template = next(
+        template_file: str = TYPE_MAPPING.get(change_type.lower(), "feature.md")
+        selected_template: Dict[str, str] = next(
             (t for t in templates if t["filename"] == template_file),
             templates[0]  # Default to first template if no match
         )
@@ -89,7 +94,7 @@ def register_pr_template_tools(mcp: FastMCP):
             template_type=selected_template["type"]
         )
         
-        suggestion = {
+        suggestion: Dict[str, Any] = {
             "recommended_template": selected_template,
             "reasoning": f"Based on your analysis: '{changes_summary}', this appears to be a {change_type} change.",
             "template_content": selected_template["content"],
