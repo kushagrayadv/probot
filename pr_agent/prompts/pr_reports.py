@@ -1,5 +1,3 @@
-"""PR status report prompts."""
-
 from mcp.server.fastmcp import FastMCP
 
 

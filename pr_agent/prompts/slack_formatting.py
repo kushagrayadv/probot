@@ -1,5 +1,3 @@
-"""Slack formatting prompts."""
-
 from mcp.server.fastmcp import FastMCP
 
 

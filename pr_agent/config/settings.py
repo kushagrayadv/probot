@@ -1,5 +1,3 @@
-"""Configuration settings and environment variables."""
-
 import os
 from pathlib import Path
 

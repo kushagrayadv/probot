@@ -1,5 +1,3 @@
-"""CI/CD analysis prompts."""
-
 from mcp.server.fastmcp import FastMCP
 
 
