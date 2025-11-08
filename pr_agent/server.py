@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 from mcp.server.fastmcp import FastMCP
+
+# Import configuration and logging
+from pr_agent.config.settings import LOG_LEVEL, LOG_FORMAT, LOG_FILE
+from pr_agent.utils.logger import setup_logging, get_logger
+
+# Setup logging first
+setup_logging(level=LOG_LEVEL, format_type=LOG_FORMAT, log_file=Path(LOG_FILE) if LOG_FILE else None)
+logger = get_logger(__name__)
 
 # Import tool registrations
 from pr_agent.tools.git_analysis import register_git_analysis_tools
@@ -29,12 +38,20 @@ register_ci_analysis_prompts(mcp)
 register_deployment_prompts(mcp)
 register_pr_report_prompts(mcp)
 
+logger.info(
+    "MCP server initialized",
+    server_name="pr-agent-slack",
+    tools_registered=len(mcp._tools) if hasattr(mcp, '_tools') else 0,
+    prompts_registered=len(mcp._prompts) if hasattr(mcp, '_prompts') else 0
+)
+
 
 if __name__ == "__main__":
     # Run MCP server normally
-    print("Starting PR Agent Slack MCP server...")
-    print("Make sure to set SLACK_WEBHOOK_URL environment variable")
-    print("To receive GitHub webhooks, run the webhook server separately:")
-    print("  python -m pr_agent.webhook.server")
+    logger.info(
+        "Starting PR Agent Slack MCP server",
+        message="Make sure to set SLACK_WEBHOOK_URL environment variable",
+        webhook_server_command="python -m pr_agent.webhook.server"
+    )
     mcp.run()
 

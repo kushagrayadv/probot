@@ -24,9 +24,16 @@ This solution extends Modules 1 and 2 with:
    
    # Recommended: GitHub webhook secret for security
    export GITHUB_WEBHOOK_SECRET="your_webhook_secret_from_github"
+   
+   # Optional: Logging configuration
+   export LOG_LEVEL="INFO"           # DEBUG, INFO, WARNING, ERROR, CRITICAL
+   export LOG_FORMAT="json"          # "json" for structured logs, "text" for human-readable
+   export LOG_FILE="/path/to/logs/app.log"  # Optional: log to file instead of stdout
    ```
    
    **Security Note**: The `GITHUB_WEBHOOK_SECRET` should match the secret configured in your GitHub repository's webhook settings. If not set, webhook signature verification will be disabled (not recommended for production).
+   
+   **Logging**: The application uses structured JSON logging by default, which is ideal for log aggregation systems. Set `LOG_FORMAT="text"` for human-readable logs during development.
 
 3. Start services:
    ```bash

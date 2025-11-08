@@ -4,6 +4,10 @@ import hmac
 import hashlib
 from typing import Optional
 
+from pr_agent.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def verify_github_signature(
     payload_body: bytes,
@@ -27,13 +31,16 @@ def verify_github_signature(
         ValueError: If secret is empty or signature header is missing
     """
     if not secret:
+        logger.error("GitHub webhook secret is not configured")
         raise ValueError("GitHub webhook secret is not configured")
     
     if not signature_header:
+        logger.error("Missing X-Hub-Signature-256 header")
         raise ValueError("Missing X-Hub-Signature-256 header")
     
     # GitHub sends signature as "sha256=<hex_digest>"
     if not signature_header.startswith("sha256="):
+        logger.error("Invalid signature format", signature_header=signature_header[:20] + "...")
         raise ValueError("Invalid signature format. Expected 'sha256=<hex_digest>'")
     
     # Extract the hex digest
@@ -47,7 +54,12 @@ def verify_github_signature(
     ).hexdigest()
     
     # Use constant-time comparison to prevent timing attacks
-    return hmac.compare_digest(expected_signature, received_signature)
+    is_valid = hmac.compare_digest(expected_signature, received_signature)
+    
+    if not is_valid:
+        logger.warning("Signature verification failed", payload_size=len(payload_body))
+    
+    return is_valid
 
 
 async def get_raw_body(request) -> bytes:

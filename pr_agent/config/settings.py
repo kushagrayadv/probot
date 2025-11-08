@@ -21,3 +21,8 @@ SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 # Set this to the secret configured in your GitHub repository webhook settings
 GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
 
+# Logging configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_FORMAT = os.getenv("LOG_FORMAT", "text")  # "json" or "text"
+LOG_FILE = os.getenv("LOG_FILE")  # Optional log file path
+

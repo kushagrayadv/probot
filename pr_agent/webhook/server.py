@@ -5,12 +5,33 @@ from datetime import datetime
 from pathlib import Path
 from aiohttp import web
 
-from pr_agent.config.settings import EVENTS_FILE, GITHUB_WEBHOOK_SECRET
+from pr_agent.config.settings import (
+    EVENTS_FILE,
+    GITHUB_WEBHOOK_SECRET,
+    LOG_LEVEL,
+    LOG_FORMAT,
+    LOG_FILE
+)
 from pr_agent.webhook.security import verify_github_signature, get_raw_body
+from pr_agent.utils.logger import setup_logging, get_logger
+
+# Setup logging
+setup_logging(level=LOG_LEVEL, format_type=LOG_FORMAT, log_file=Path(LOG_FILE) if LOG_FILE else None)
+logger = get_logger(__name__)
 
 
 async def handle_webhook(request):
     """Handle incoming GitHub webhook with signature verification."""
+    event_type = request.headers.get("X-GitHub-Event", "unknown")
+    remote_addr = request.remote
+    
+    logger.info(
+        "Webhook request received",
+        event_type=event_type,
+        remote_addr=remote_addr,
+        path=request.path
+    )
+    
     try:
         # Read raw body first for signature verification
         # This must be done before parsing JSON
@@ -21,52 +42,114 @@ async def handle_webhook(request):
             signature_header = request.headers.get("X-Hub-Signature-256")
             try:
                 if not verify_github_signature(raw_body, signature_header, GITHUB_WEBHOOK_SECRET):
+                    logger.warning(
+                        "Invalid webhook signature",
+                        event_type=event_type,
+                        remote_addr=remote_addr
+                    )
                     return web.json_response(
                         {"error": "Invalid webhook signature"},
                         status=401
                     )
+                logger.debug("Webhook signature verified successfully", event_type=event_type)
             except ValueError as e:
                 # Invalid signature format or missing secret
+                logger.error(
+                    "Signature verification failed",
+                    event_type=event_type,
+                    remote_addr=remote_addr,
+                    error=str(e)
+                )
                 return web.json_response(
                     {"error": f"Signature verification failed: {str(e)}"},
                     status=401
                 )
         
         # Parse JSON from raw body
-        data = json.loads(raw_body.decode('utf-8'))
+        try:
+            data = json.loads(raw_body.decode('utf-8'))
+        except json.JSONDecodeError as e:
+            logger.error(
+                "Invalid JSON payload",
+                event_type=event_type,
+                remote_addr=remote_addr,
+                error=str(e)
+            )
+            return web.json_response(
+                {"error": f"Invalid JSON payload: {str(e)}"},
+                status=400
+            )
         
         # Create event record
+        repository = data.get("repository", {}).get("full_name", "unknown")
+        action = data.get("action", "unknown")
+        sender = data.get("sender", {}).get("login", "unknown")
+        
         event = {
             "timestamp": datetime.utcnow().isoformat(),
-            "event_type": request.headers.get("X-GitHub-Event", "unknown"),
-            "action": data.get("action"),
+            "event_type": event_type,
+            "action": action,
             "workflow_run": data.get("workflow_run"),
             "check_run": data.get("check_run"),
-            "repository": data.get("repository", {}).get("full_name"),
-            "sender": data.get("sender", {}).get("login")
+            "repository": repository,
+            "sender": sender
         }
+        
+        logger.info(
+            "Processing webhook event",
+            event_type=event_type,
+            action=action,
+            repository=repository,
+            sender=sender
+        )
         
         # Load existing events
         events = []
         if EVENTS_FILE.exists():
-            with open(EVENTS_FILE, 'r') as f:
-                events = json.load(f)
+            try:
+                with open(EVENTS_FILE, 'r') as f:
+                    events = json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning(
+                    "Failed to load existing events file",
+                    error=str(e),
+                    events_file=str(EVENTS_FILE)
+                )
+                events = []
         
         # Add new event and keep last 100
         events.append(event)
         events = events[-100:]
         
         # Save events
-        with open(EVENTS_FILE, 'w') as f:
-            json.dump(events, f, indent=2)
+        try:
+            with open(EVENTS_FILE, 'w') as f:
+                json.dump(events, f, indent=2)
+            logger.debug("Event saved successfully", event_type=event_type, repository=repository)
+        except IOError as e:
+            logger.error(
+                "Failed to save event",
+                error=str(e),
+                events_file=str(EVENTS_FILE),
+                event_type=event_type
+            )
+            # Continue even if save fails - we still want to return success
+        
+        logger.info(
+            "Webhook processed successfully",
+            event_type=event_type,
+            repository=repository,
+            action=action
+        )
         
         return web.json_response({"status": "received"})
-    except json.JSONDecodeError as e:
-        return web.json_response(
-            {"error": f"Invalid JSON payload: {str(e)}"},
-            status=400
-        )
     except Exception as e:
+        logger.exception(
+            "Unexpected error processing webhook",
+            event_type=event_type,
+            remote_addr=remote_addr,
+            error=str(e)
+        )
         return web.json_response(
             {"error": f"Internal server error: {str(e)}"},
             status=500
@@ -79,14 +162,19 @@ app.router.add_post('/webhook/github', handle_webhook)
 
 
 if __name__ == '__main__':
-    print("🚀 Starting webhook server on http://localhost:8080")
-    print("📝 Events will be saved to:", EVENTS_FILE)
-    print("🔗 Webhook URL: http://localhost:8080/webhook/github")
+    logger.info(
+        "Starting webhook server",
+        host="localhost",
+        port=8080,
+        events_file=str(EVENTS_FILE),
+        signature_verification="enabled" if GITHUB_WEBHOOK_SECRET else "disabled"
+    )
     
-    if GITHUB_WEBHOOK_SECRET:
-        print("🔒 Webhook signature verification: ENABLED")
-    else:
-        print("⚠️  Webhook signature verification: DISABLED (set GITHUB_WEBHOOK_SECRET to enable)")
+    if not GITHUB_WEBHOOK_SECRET:
+        logger.warning(
+            "Webhook signature verification is disabled",
+            message="Set GITHUB_WEBHOOK_SECRET environment variable to enable"
+        )
     
     web.run_app(app, host='localhost', port=8080)
 
