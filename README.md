@@ -63,6 +63,16 @@ uv run mypy pr_agent
 uv run pytest
 ```
 
+### Async/Await Consistency
+
+The project uses async/await consistently throughout:
+- **HTTP requests**: Uses `aiohttp` for all HTTP operations (Slack webhooks, webhook server)
+- **Git operations**: Uses `asyncio.create_subprocess_exec` for non-blocking git commands
+- **File I/O**: Uses `asyncio.to_thread()` for file operations to avoid blocking the event loop
+- **Webhook server**: Fully async using `aiohttp` web framework
+
+This ensures the application remains responsive and can handle concurrent requests efficiently.
+
 ## Key Learning Outcomes
 
 This solution demonstrates all MCP primitives working together for real-world team automation.

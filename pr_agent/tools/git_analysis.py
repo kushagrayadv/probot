@@ -1,6 +1,6 @@
 import json
 import os
-import subprocess
+import asyncio
 from typing import Optional, Dict, Any
 
 from mcp.server.fastmcp import FastMCP
@@ -58,38 +58,56 @@ def register_git_analysis_tools(mcp: FastMCP) -> None:
                     pass
             
             # Use provided working directory or current directory
-            cwd = working_directory if working_directory else os.getcwd()
+            cwd: str = working_directory if working_directory else os.getcwd()
             logger.debug("Using working directory", cwd=cwd)
+            
+            # Run git commands asynchronously
             # Get list of changed files
-            files_result = subprocess.run(
-                ["git", "diff", "--name-status", f"{base_branch}...HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
+            files_process = await asyncio.create_subprocess_exec(
+                "git", "diff", "--name-status", f"{base_branch}...HEAD",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
                 cwd=cwd
             )
+            files_stdout, files_stderr = await files_process.communicate()
+            
+            if files_process.returncode != 0:
+                raise Exception(f"Git command failed: {files_stderr.decode()}")
+            
+            files_result_stdout: str = files_stdout.decode()
             
             # Get diff statistics
-            stat_result = subprocess.run(
-                ["git", "diff", "--stat", f"{base_branch}...HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
+            stat_process = await asyncio.create_subprocess_exec(
+                "git", "diff", "--stat", f"{base_branch}...HEAD",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
                 cwd=cwd
             )
+            stat_stdout, stat_stderr = await stat_process.communicate()
+            
+            if stat_process.returncode != 0:
+                raise Exception(f"Git command failed: {stat_stderr.decode()}")
+            
+            stat_result_stdout: str = stat_stdout.decode()
             
             # Get the actual diff if requested
-            diff_content = ""
-            truncated = False
-            diff_lines = []
+            diff_content: str = ""
+            truncated: bool = False
+            diff_lines: list[str] = []
             if include_diff:
-                diff_result = subprocess.run(
-                    ["git", "diff", f"{base_branch}...HEAD"],
-                    capture_output=True,
-                    text=True,
+                diff_process = await asyncio.create_subprocess_exec(
+                    "git", "diff", f"{base_branch}...HEAD",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
                     cwd=cwd
                 )
-                diff_lines = diff_result.stdout.split('\n')
+                diff_stdout, diff_stderr = await diff_process.communicate()
+                
+                if diff_process.returncode != 0:
+                    raise Exception(f"Git command failed: {diff_stderr.decode()}")
+                
+                diff_result_stdout: str = diff_stdout.decode()
+                diff_lines = diff_result_stdout.split('\n')
                 
                 # Check if we need to truncate
                 if len(diff_lines) > max_diff_lines:
@@ -98,22 +116,27 @@ def register_git_analysis_tools(mcp: FastMCP) -> None:
                     diff_content += "\n... Use max_diff_lines parameter to see more ..."
                     truncated = True
                 else:
-                    diff_content = diff_result.stdout
+                    diff_content = diff_result_stdout
             
             # Get commit messages for context
-            commits_result = subprocess.run(
-                ["git", "log", "--oneline", f"{base_branch}..HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
+            commits_process = await asyncio.create_subprocess_exec(
+                "git", "log", "--oneline", f"{base_branch}..HEAD",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
                 cwd=cwd
             )
+            commits_stdout, commits_stderr = await commits_process.communicate()
+            
+            if commits_process.returncode != 0:
+                raise Exception(f"Git command failed: {commits_stderr.decode()}")
+            
+            commits_result_stdout: str = commits_stdout.decode()
             
             analysis: Dict[str, Any] = {
                 "base_branch": base_branch,
-                "files_changed": files_result.stdout,
-                "statistics": stat_result.stdout,
-                "commits": commits_result.stdout,
+                "files_changed": files_result_stdout,
+                "statistics": stat_result_stdout,
+                "commits": commits_result_stdout,
                 "diff": diff_content if include_diff else "Diff not included (set include_diff=true to see full diff)",
                 "truncated": truncated,
                 "total_diff_lines": len(diff_lines) if include_diff else 0
@@ -122,26 +145,18 @@ def register_git_analysis_tools(mcp: FastMCP) -> None:
             logger.info(
                 "File changes analyzed successfully",
                 base_branch=base_branch,
-                files_changed_count=len(files_result.stdout.split('\n')) if files_result.stdout else 0,
+                files_changed_count=len(files_result_stdout.split('\n')) if files_result_stdout else 0,
                 diff_truncated=truncated,
                 total_diff_lines=len(diff_lines) if include_diff else 0
             )
             
             return json.dumps(analysis, indent=2)
             
-        except subprocess.CalledProcessError as e:
-            logger.error(
-                "Git command failed",
-                base_branch=base_branch,
-                command_error=e.stderr,
-                return_code=e.returncode
-            )
-            return json.dumps({"error": f"Git error: {e.stderr}"})
         except Exception as e:
+            error_msg: str = str(e)
             logger.exception(
-                "Unexpected error analyzing file changes",
+                "Error analyzing file changes",
                 base_branch=base_branch,
-                error=str(e)
+                error=error_msg
             )
-            return json.dumps({"error": str(e)})
-
+            return json.dumps({"error": f"Git error: {error_msg}"})

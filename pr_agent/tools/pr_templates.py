@@ -1,4 +1,5 @@
 import json
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -27,7 +28,8 @@ def register_pr_template_tools(mcp: FastMCP) -> None:
         for filename, template_type in DEFAULT_TEMPLATES.items():
             template_path = TEMPLATES_DIR / filename
             try:
-                content: str = template_path.read_text()
+                # Use asyncio.to_thread to avoid blocking the event loop
+                content: str = await asyncio.to_thread(template_path.read_text)
                 templates.append({
                     "filename": filename,
                     "type": template_type,
@@ -63,7 +65,8 @@ def register_pr_template_tools(mcp: FastMCP) -> None:
         for filename, template_type in DEFAULT_TEMPLATES.items():
             template_path = TEMPLATES_DIR / filename
             try:
-                content: str = template_path.read_text()
+                # Use asyncio.to_thread to avoid blocking the event loop
+                content: str = await asyncio.to_thread(template_path.read_text)
                 templates.append({
                     "filename": filename,
                     "type": template_type,

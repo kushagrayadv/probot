@@ -1,6 +1,7 @@
 import os
 from typing import Optional
-import requests
+import aiohttp
+import asyncio
 
 from mcp.server.fastmcp import FastMCP
 
@@ -39,42 +40,48 @@ def register_slack_tools(mcp: FastMCP) -> None:
             webhook_configured=True
         )
         
+        # Prepare the payload with proper Slack formatting
+        payload = {
+            "text": message,
+            "mrkdwn": True
+        }
+        
+        # Create timeout for the request
+        timeout = aiohttp.ClientTimeout(total=10)
+        
         try:
-            # Prepare the payload with proper Slack formatting
-            payload = {
-                "text": message,
-                "mrkdwn": True
-            }
-            
-            # Send POST request to Slack webhook
-            response = requests.post(
-                webhook_url,
-                json=payload,
-                timeout=10
-            )
-            
-            # Check if request was successful
-            if response.status_code == 200:
-                logger.info(
-                    "Slack notification sent successfully",
-                    status_code=response.status_code,
-                    message_length=message_length
-                )
-                return "✅ Message sent successfully to Slack"
-            else:
-                logger.error(
-                    "Failed to send Slack notification",
-                    status_code=response.status_code,
-                    response_text=response.text[:200]  # Limit log size
-                )
-                return f"❌ Failed to send message. Status: {response.status_code}, Response: {response.text}"
-            
-        except requests.exceptions.Timeout:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    webhook_url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
+                ) as response:
+                    response_text = await response.text()
+                    
+                    # Check if request was successful
+                    if response.status == 200:
+                        logger.info(
+                            "Slack notification sent successfully",
+                            status_code=response.status,
+                            message_length=message_length
+                        )
+                        return "✅ Message sent successfully to Slack"
+                    else:
+                        # Limit response text size for logging
+                        response_preview = response_text[:200] if response_text else ""
+                        logger.error(
+                            "Failed to send Slack notification",
+                            status_code=response.status,
+                            response_text=response_preview
+                        )
+                        return f"❌ Failed to send message. Status: {response.status}, Response: {response_preview}"
+        
+        except asyncio.TimeoutError:
             logger.error("Slack webhook request timed out", timeout=10)
             return "❌ Request timed out. Check your internet connection and try again."
-        except requests.exceptions.ConnectionError as e:
+        except aiohttp.ClientError as e:
             logger.error("Slack webhook connection error", error=str(e))
-            return "❌ Connection error. Check your internet connection and webhook URL."
+            return f"❌ Connection error: {str(e)}. Check your internet connection and webhook URL."
         except Exception as e:
             logger.exception("Unexpected error sending Slack notification", error=str(e))
             return f"❌ Error sending message: {str(e)}"
